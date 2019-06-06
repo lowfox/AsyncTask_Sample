@@ -9,8 +9,18 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.w3c.dom.Text;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         //都市データを格納するマップオブジェクトの用意とcitylistへのデータ登録
         Map<String,String> city = new HashMap<>();
         city.put("name","神戸");
-        city.put("id","280000");
+        city.put("id","280010");
         cityList.add(city);
 
         city = new HashMap<>();
@@ -41,12 +51,12 @@ public class MainActivity extends AppCompatActivity {
 
         city = new HashMap<>();
         city.put("name","熊本");
-        city.put("id","290000");
+        city.put("id","430010");
         cityList.add(city);
 
         city = new HashMap<>();
-        city.put("name","豊岡");
-        city.put("id","300000");
+        city.put("name","網走");
+        city.put("id","013010");
         cityList.add(city);
 
         //simpleadapterで使用するfrom-to要変数の用意
@@ -104,10 +114,46 @@ public class MainActivity extends AppCompatActivity {
             //可変長引数の1個目（インデックス0）を取得。これが都市ID
             String id=params[0];
             //都市IDを使って接続URL文字列を作成
-            String urlStr =""+ id;
+            String urlStr ="http://weather.livedoor.com/area/forecast/"+ id;
             //天気情報サービスから取得したJSON文字列。天気情報が格納されている。
             String result="";
-            //ここに上記URLから取得したJSON文字列を取得する処理を書く。
+            //ここに上記URLから取得したJSON文字列を取得する処理を書く
+            //HTTP接続を行うhttpURLConnectionオブジェクトを宣言。finallyで確実に会報するためにtry外で宣言
+            HttpURLConnection con =null;
+            //HTTP接続のレスポンスデータとして取得するInputStreamオブジェクトを宣言。同じくtry外で宣言。
+            InputStream is =null;
+            try{
+                //URLオブジェクトを生成。
+                URL url = new URL(urlStr);
+                //URLオブジェクトからHttpURLConnectionオブジェクトを取得
+                con = (HttpURLConnection) url.openConnection();
+                //HTTP接続メソッドを設定
+                con.setRequestMethod("GET");
+                //接続
+                con.connect();
+                //HTTPURLConnectionオブジェクトからレスポンスデータを取得
+                is=con.getInputStream();
+                //レスポンスデータであるInputStreamオブジェクトを文字列に変換
+                result = is2String(is);
+            }
+            catch (MalformedURLException ex){
+            }
+            catch (IOException ex){
+            }
+            finally {
+                //HttpURLConnectionオブジェクトがnullでないなら解放。
+                if(con != null){
+                    con.disconnect();
+                }
+                //InputStreamオブジェクトがnullでないなら解放。
+                if(is != null){
+                    try{
+                        is.close();
+                    }
+                    catch (IOException ex){
+                    }
+                }
+            }
 
             //JSON文字列を返す
             return result;
@@ -118,11 +164,39 @@ public class MainActivity extends AppCompatActivity {
             String telop ="";
             String desc="";
 
-            //ここに天気情報JSON文字列を解析するい処理を記述
 
+            //ここに天気情報JSON文字列を解析するい処理を記述
+            try{
+                //JSON文字列からJSONObjectオブジェクトを生成。これをルートJSONオブジェクトとする。
+                JSONObject rootJSON = new JSONObject(result);
+
+                //ルートJSON直下のdescriptionJSONオブジェクトを取得
+                JSONObject descriptionJSON = rootJSON.getJSONObject("description");
+                //descriprionプロパティ直下のtext文字列（天気概要文）を取得
+                desc = descriptionJSON.getString("text");
+                //desc = rootJSON.getString("description");
+                //ルートJSON直下のforecastsJSON配列を取得
+                JSONArray forecasts = rootJSON.getJSONArray("forecasts");
+                //forecastsJSON配列のひとつ目(インデックス０)のJSONオブジェクトを取得
+                JSONObject forecastNow = forecasts.getJSONObject(0);
+                //forecasts１つ目のJSONオブジェクトからtelop文字列（天気）を取得
+                telop = forecastNow.getString("telop");
+            }catch (JSONException ex){
+
+            }
             //天気情報用文字列をテキストビューにセット
             _tvWeatherTelop.setText(telop);
             _tvWeatherDesc.setText(desc);
+        }
+        private String is2String(InputStream is)throws IOException{
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+            StringBuffer sb = new StringBuffer();
+            char[] b = new char[1024];
+            int line;
+            while(0<=(line = reader.read(b))){
+                sb.append(b,0,line);
+            }
+            return sb.toString();
         }
     }
 
