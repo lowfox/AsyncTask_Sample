@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             //可変長引数の1個目（インデックス0）を取得。これが都市ID
             String id=params[0];
             //都市IDを使って接続URL文字列を作成
-            String urlStr ="http://weather.livedoor.com/area/forecast/"+ id;
+            String urlStr ="http://weather.livedoor.com/forecast/webservice/json/v1?city="+ id;
             //天気情報サービスから取得したJSON文字列。天気情報が格納されている。
             String result="";
             //ここに上記URLから取得したJSON文字列を取得する処理を書く
